@@ -1,0 +1,67 @@
+service: awswebrtc
+
+custom:
+  currentStage: ${opt:stage, self:provider.stage}
+  lambdaRunTime: python3.7
+  socketConnectionsTableName: socketConnections-#{AWS::AccountId}-${self:custom.currentStage}
+
+provider:
+  name: aws
+  iamManagedPolicies:
+  - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+  runtime: ${self:custom.lambdaRunTime}
+  versionFunctions: false
+  region: ap-south-1
+  timeout: 29
+
+plugins:
+  - serverless-pseudo-parameters
+
+package:
+  individually: true
+  exclude:
+    - "lib/**"
+    - "node_modules/**"
+
+functions:
+  connectHandler:
+    handler: connect_handler.handle
+    events:
+      - websocket: $connect
+    environment:
+      SOCKET_CONNECTIONS_TABLE_NAME: ${self:custom.socketConnectionsTableName}
+
+  disconnectHandler:
+    handler: disconnect_handler.handle
+    events:
+      - websocket: $disconnect
+    environment:
+      SOCKET_CONNECTIONS_TABLE_NAME: ${self:custom.socketConnectionsTableName}
+
+  onMessageHandler:
+    handler: on_message_handler.handle
+    events:
+      - websocket:
+          route: onMessage
+    environment:
+      SOCKET_CONNECTIONS_TABLE_NAME: ${self:custom.socketConnectionsTableName}
+
+resources:
+  Resources:
+    socketConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:custom.socketConnectionsTableName}
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        SSESpecification:
+          SSEEnabled: true
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
