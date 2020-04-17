@@ -1,6 +1,11 @@
 # AWS Websocket Messaging
 
 > This repo contains Serverless Framework project for a simple AWS Websocket chat app
+> Technolgies Used: 
+   1. ApiGateway Sockets
+   2. lambda
+   3. DynamoDB
+   4. Ec2
 
 ### Setup
 
